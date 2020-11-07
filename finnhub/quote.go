@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"time"
 )
 
 type Quote struct {
@@ -16,7 +15,6 @@ type Quote struct {
 }
 
 func (c *Client) GetQuote(symbol string) (*Quote, error) {
-	time.Sleep(time.Second * 1)
 	query, _ := url.Parse(c.baseURL.String())
 	query.Path += "/quote"
 	params := url.Values{}
@@ -32,4 +30,13 @@ func (c *Client) GetQuote(symbol string) (*Quote, error) {
 	quote := &Quote{}
 	err = json.NewDecoder(res.Body).Decode(quote)
 	return quote, err
+}
+
+type QuoteTask struct {
+	Symbol   string
+	Executor func(symbol string) (*Quote, error)
+}
+
+func (q *QuoteTask) Execute() (interface{}, error) {
+	return q.Executor(q.Symbol)
 }

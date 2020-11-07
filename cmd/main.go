@@ -2,31 +2,33 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bzdanowicz/stock_data/finnhub"
 	"github.com/bzdanowicz/stock_data/workerpool"
 )
 
-type QuoteTask struct {
-	symbol   string
-	executor func(symbol string) (*finnhub.Quote, error)
-}
-
-func (q *QuoteTask) Perform() (interface{}, error) {
-	return q.executor(q.symbol)
+func refreshData(ticker *time.Ticker) {
+	for {
+		<-ticker.C
+		fmt.Println("tick")
+	}
 }
 
 func main() {
 	fmt.Println("Stack Data provider.")
 
-	c := finnhub.NewClient("api-key")
+	c := finnhub.NewClient("bui1usn48v6rfhsb6kp0")
 
-	dispatcher := workerpool.NewDispatcher(2)
+	dispatcher := workerpool.NewDispatcher(4, 50)
 	dispatcher.Start()
 
-	task := QuoteTask{"AAPL", c.GetQuote}
+	task := finnhub.QuoteTask{Symbol: "AAPL", Executor: c.GetQuote}
 	dispatcher.Enqueue(&task)
+	dispatcher.WaitAllFinished()
 	quote := dispatcher.GetResult().TaskResult
-
 	fmt.Println(quote)
+
+	ticker := time.NewTicker(5 * time.Second)
+	refreshData(ticker)
 }
