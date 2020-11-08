@@ -2,7 +2,6 @@ package finnhub
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 )
 
@@ -21,7 +20,6 @@ func (c *Client) GetQuote(symbol string) (*Quote, error) {
 	params.Add("symbol", symbol)
 	query.RawQuery = params.Encode()
 
-	fmt.Println(query)
 	res, err := c.Get(query.String())
 	if err != nil {
 		return &Quote{}, err
@@ -39,4 +37,8 @@ type QuoteTask struct {
 
 func (q *QuoteTask) Execute() (interface{}, error) {
 	return q.Executor(q.Symbol)
+}
+
+func (q *QuoteTask) GetParameter() string {
+	return q.Symbol
 }

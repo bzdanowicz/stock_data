@@ -6,6 +6,7 @@ import (
 
 type Task interface {
 	Execute() (interface{}, error)
+	GetParameter() string
 }
 
 type Result struct {

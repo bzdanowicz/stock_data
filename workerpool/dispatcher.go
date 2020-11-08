@@ -46,9 +46,6 @@ func (dispatcher *Dispatcher) Enqueue(task Task) {
 }
 
 func (dispatcher *Dispatcher) GetResult() Result {
-	if len(dispatcher.Results) == 0 {
-		return Result{}
-	}
 	return <-dispatcher.Results
 }
 
