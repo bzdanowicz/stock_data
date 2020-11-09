@@ -3,31 +3,16 @@ package internal
 import (
 	"fmt"
 	"image"
-	"log"
 	"sort"
 	"strconv"
 
-	"github.com/bzdanowicz/stock_data/finnhub"
-	"github.com/bzdanowicz/stock_data/workerpool"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
 
-type QuoteData map[string]finnhub.Quote
-type RatesData finnhub.Rates
-
-type Data struct {
-	Quotes QuoteData
-	Rates  RatesData
-}
-
-func (data *Data) Initialize(quotes []string, base string) {
-	data.Quotes = make(QuoteData)
-	data.Rates.Base = base
-	for _, q := range quotes {
-		data.Quotes[q] = finnhub.Quote{}
-	}
-}
+const (
+	tableWidth = 210
+)
 
 func CreateTable(title string, rows int, y int) *widgets.Table {
 	table := widgets.NewTable()
@@ -36,7 +21,8 @@ func CreateTable(title string, rows int, y int) *widgets.Table {
 	table.TextAlignment = ui.AlignCenter
 	table.Block.Title = title
 	table.RowStyles[0] = ui.NewStyle(ui.ColorWhite, ui.ColorBlack, ui.ModifierBold)
-	table.SetRect(0, y, 210, y+3+rows*2)
+	rows += 1 // We also need to include Description row
+	table.SetRect(0, y, tableWidth, y+rows*2+1)
 	return table
 }
 
@@ -87,33 +73,6 @@ func UpdateTable(table *widgets.Table, data interface{}) {
 				fmt.Sprintf("%f", ratesValues.CHF), fmt.Sprintf("%f", ratesValues.JPY), fmt.Sprintf("%f", ratesValues.PLN)},
 			[]string{fmt.Sprintf("Inverse currency rate %s", rates.Base), fmt.Sprintf("%f", 1/ratesValues.USD), fmt.Sprintf("%f", 1/ratesValues.EUR),
 				fmt.Sprintf("%f", 1/ratesValues.GBP), fmt.Sprintf("%f", 1/ratesValues.CHF), fmt.Sprintf("%f", 1/ratesValues.JPY), fmt.Sprintf("%f", 1/ratesValues.PLN)},
-		}
-	}
-}
-
-func RequestQuotes(quotes QuoteData, dispatcher *workerpool.Dispatcher, client *finnhub.Client) {
-	for key := range quotes {
-		task := finnhub.QuoteTask{Symbol: key, Executor: client.GetQuote}
-		dispatcher.Enqueue(&task)
-	}
-}
-
-func RequestRates(base string, dispatcher *workerpool.Dispatcher, client *finnhub.Client) {
-	task := finnhub.RatesTask{BaseRate: base, Executor: client.GetRates}
-	dispatcher.Enqueue(&task)
-
-}
-
-func DataReader(data *Data, dispatcher *workerpool.Dispatcher) {
-	for {
-		result := dispatcher.GetResult()
-		switch res := result.TaskResult.(type) {
-		case *finnhub.Quote:
-			(data.Quotes)[(*result.RequestedTask).GetParameter()] = *res
-		case *finnhub.Rates:
-			data.Rates.Values = res.Values
-		default:
-			log.Fatalln("Unsupported type")
 		}
 	}
 }
