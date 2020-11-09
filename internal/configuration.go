@@ -7,8 +7,9 @@ import (
 )
 
 type Configuration struct {
-	ApiKey     string   `json:"apiKey"`
-	UserQuotes []string `json:"quotes"`
+	ApiKey       string   `json:"apiKey"`
+	UserQuotes   []string `json:"quotes"`
+	BaseCurrency string   `json:"base"`
 }
 
 func ReadConfiguration() Configuration {
