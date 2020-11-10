@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/bzdanowicz/stock_data/finnhub"
@@ -46,6 +45,18 @@ func DataReader(data *Data, dispatcher *workerpool.Dispatcher) {
 	}
 }
 
+func UpdatePlotData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot) {
+	if candlePlot.Active {
+		to := time.Now()
+		from := to.AddDate(-3, 0, 0)
+		RequestCandle(candlePlot.Symbol, from, to, dispatcher, client)
+		dispatcher.WaitAllFinished()
+		UpdatePlot(candlePlot.Plot, data.Candle)
+		if len(candlePlot.Plot.Data) == len(candlePlot.Plot.DataLabels) && len(candlePlot.Plot.Data) != 0 {
+			ui.Render(candlePlot.Plot)
+		}
+	}
+}
 func UpdateData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, quoteTable *widgets.Table, ratesTable *widgets.Table, candlePlot *CandlePlot) {
 	RequestQuotes(&data.Quotes, dispatcher, client)
 	RequestRates(data.Rates.Base, dispatcher, client)
@@ -55,28 +66,22 @@ func UpdateData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data 
 	ui.Render(quoteTable)
 	ui.Render(ratesTable)
 
-	if candlePlot.Active {
-		to := time.Now()
-		from := to.AddDate(0, 0, -7)
-		RequestCandle(candlePlot.Symbol, from, to, dispatcher, client)
-		dispatcher.WaitAllFinished()
-		UpdatePlot(candlePlot.Plot, data.Candle)
-		ui.Render(candlePlot.Plot)
-	}
+	UpdatePlotData(dispatcher, client, data, candlePlot)
 }
 
-func HandleMouseClick(mouseEvent *ui.Mouse, quotesTable *widgets.Table, candlePlot *CandlePlot) {
-	index, data := GetRecordFromCoordinates(quotesTable, mouseEvent)
-	if data == nil {
+func HandleMouseClick(mouseEvent *ui.Mouse, quotesTable *widgets.Table, dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot) {
+	index, record := GetRecordFromCoordinates(quotesTable, mouseEvent)
+	if record == nil {
 		return
 	}
-	row := data.([]string)
+	row := record.([]string)
 	if index == 0 {
 		return
 	}
 	quote_symbol := row[0]
 	candlePlot.Active = true
 	candlePlot.Symbol = quote_symbol
+	UpdatePlotData(dispatcher, client, data, candlePlot)
 }
 
 type CandlePlot struct {
@@ -89,21 +94,15 @@ type CandlePlot struct {
 
 func CreateCandlePlot(y int) *CandlePlot {
 	candlePlot := CandlePlot{Plot: NewSimplePlot(), Active: false}
-	candlePlot.Plot.SetRect(0, y, 150, y+30)
+	candlePlot.Plot.SetRect(0, y, 210, y+30)
 	return &candlePlot
 }
 
 func UpdatePlot(plot *SimplePlot, data interface{}) {
 	plot.DataLabels = make([]string, 0)
-
 	for _, t := range data.(finnhub.Candle).Timestamps {
-		plot.DataLabels = append(plot.DataLabels, fmt.Sprintf("%v", t))
+		tm := time.Unix(t, 0)
+		plot.DataLabels = append(plot.DataLabels, tm.Format("02/Jan/06"))
 	}
-
 	plot.Data = data.(finnhub.Candle).CurrentPrice
-
-	plot.HorizontalScale = plot.Dx() / (len(plot.Data))
-	if plot.HorizontalScale < 1 {
-		plot.HorizontalScale = 1
-	}
 }

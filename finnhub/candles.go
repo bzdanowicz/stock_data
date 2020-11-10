@@ -13,7 +13,7 @@ type Candle struct {
 	HighPrice    []float32 `json:"h"`
 	OpenPrice    []float32 `json:"o"`
 	Volume       []float32 `json:"v"`
-	Timestamps   []int     `json:"t"`
+	Timestamps   []int64   `json:"t"`
 	Status       string    `json:"s"`
 }
 
@@ -22,7 +22,7 @@ func (c *Client) GetCandle(symbol string, from time.Time, to time.Time) (*Candle
 	query.Path += "/stock/candle"
 	params := url.Values{}
 	params.Add("symbol", symbol)
-	params.Add("resolution", "5")
+	params.Add("resolution", "D")
 	params.Add("from", strconv.FormatInt(from.Unix(), 10))
 	params.Add("to", strconv.FormatInt(to.Unix(), 10))
 	query.RawQuery = params.Encode()

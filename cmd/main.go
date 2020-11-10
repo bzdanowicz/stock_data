@@ -43,7 +43,7 @@ func main() {
 				return
 			case "<MouseLeft>":
 				mouseEvent := e.Payload.(ui.Mouse)
-				internal.HandleMouseClick(&mouseEvent, quotesTable, candlePlot)
+				internal.HandleMouseClick(&mouseEvent, quotesTable, dispatcher, client, &data, candlePlot)
 			}
 		case <-ticker.C:
 			internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot)
