@@ -28,11 +28,11 @@ func main() {
 
 	quotesTable := internal.CreateTable("Stock Quotes", len(configuration.UserQuotes), 0)
 	ratesTable := internal.CreateTable("Rates", 2, quotesTable.GetRect().Max.Y)
+	candlePlot := internal.CreateCandlePlot(ratesTable.GetRect().Max.Y)
 
-	internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable)
+	internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot)
 
 	ticker := time.NewTicker(10 * time.Second)
-
 	uiEvents := ui.PollEvents()
 
 	for {
@@ -43,10 +43,10 @@ func main() {
 				return
 			case "<MouseLeft>":
 				mouseEvent := e.Payload.(ui.Mouse)
-				internal.HandleMouseClick(&mouseEvent, quotesTable)
+				internal.HandleMouseClick(&mouseEvent, quotesTable, candlePlot)
 			}
 		case <-ticker.C:
-			internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable)
+			internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot)
 		}
 	}
 }
