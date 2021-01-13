@@ -21,12 +21,13 @@ func RequestRates(base string, dispatcher *workerpool.Dispatcher, client *finnhu
 	dispatcher.Enqueue(&task)
 }
 
-func RequestCandle(symbol string, from time.Time, to time.Time, dispatcher *workerpool.Dispatcher, client *finnhub.Client) {
+func RequestCandle(symbol string, from time.Time, to time.Time, resolution string, dispatcher *workerpool.Dispatcher, client *finnhub.Client) {
 	task := finnhub.CandleTask{
-		Symbol:   symbol,
-		From:     from,
-		To:       to,
-		Executor: client.GetCandle,
+		Symbol:     symbol,
+		From:       from,
+		To:         to,
+		Resolution: resolution,
+		Executor:   client.GetCandle,
 	}
 	dispatcher.Enqueue(&task)
 }
@@ -45,19 +46,36 @@ func DataReader(data *Data, dispatcher *workerpool.Dispatcher) {
 	}
 }
 
-func UpdatePlotData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot) {
+func UpdatePlotData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot, tabPane *widgets.TabPane) {
 	if candlePlot.Active {
 		to := time.Now()
-		from := to.AddDate(-3, 0, 0)
-		RequestCandle(candlePlot.Symbol, from, to, dispatcher, client)
+		var from time.Time
+		var resolution string
+		switch tabPane.ActiveTabIndex {
+		case 0:
+			from = to.AddDate(0, 0, -7)
+			resolution = "5"
+		case 1:
+			from = to.AddDate(0, -1, 0)
+			resolution = "5"
+		case 2:
+			from = to.AddDate(-1, 0, 0)
+			resolution = "D"
+		case 3:
+			from = to.AddDate(-5, 0, 0)
+			resolution = "D"
+		}
+
+		RequestCandle(candlePlot.Symbol, from, to, resolution, dispatcher, client)
 		dispatcher.WaitAllFinished()
 		UpdatePlot(candlePlot.Plot, data.Candle)
 		if len(candlePlot.Plot.Data) == len(candlePlot.Plot.DataLabels) && len(candlePlot.Plot.Data) != 0 {
 			ui.Render(candlePlot.Plot)
+			ui.Render(tabPane)
 		}
 	}
 }
-func UpdateData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, quoteTable *widgets.Table, ratesTable *widgets.Table, candlePlot *CandlePlot) {
+func UpdateData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, quoteTable *widgets.Table, ratesTable *widgets.Table, candlePlot *CandlePlot, tabPane *widgets.TabPane) {
 	RequestQuotes(&data.Quotes, dispatcher, client)
 	RequestRates(data.Rates.Base, dispatcher, client)
 	dispatcher.WaitAllFinished()
@@ -66,10 +84,10 @@ func UpdateData(dispatcher *workerpool.Dispatcher, client *finnhub.Client, data 
 	ui.Render(quoteTable)
 	ui.Render(ratesTable)
 
-	UpdatePlotData(dispatcher, client, data, candlePlot)
+	UpdatePlotData(dispatcher, client, data, candlePlot, tabPane)
 }
 
-func HandleMouseClick(mouseEvent *ui.Mouse, quotesTable *widgets.Table, dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot) {
+func HandleMouseClick(mouseEvent *ui.Mouse, quotesTable *widgets.Table, dispatcher *workerpool.Dispatcher, client *finnhub.Client, data *Data, candlePlot *CandlePlot, tabPane *widgets.TabPane) {
 	index, record := GetRecordFromCoordinates(quotesTable, mouseEvent)
 	if record == nil {
 		return
@@ -81,7 +99,8 @@ func HandleMouseClick(mouseEvent *ui.Mouse, quotesTable *widgets.Table, dispatch
 	quote_symbol := row[0]
 	candlePlot.Active = true
 	candlePlot.Symbol = quote_symbol
-	UpdatePlotData(dispatcher, client, data, candlePlot)
+	candlePlot.Plot.Block.Title = quote_symbol
+	UpdatePlotData(dispatcher, client, data, candlePlot, tabPane)
 }
 
 type CandlePlot struct {
@@ -105,4 +124,12 @@ func UpdatePlot(plot *SimplePlot, data interface{}) {
 		plot.DataLabels = append(plot.DataLabels, tm.Format("02/Jan/06"))
 	}
 	plot.Data = data.(finnhub.Candle).CurrentPrice
+}
+
+func CreateTabPane(x int, y int) *widgets.TabPane {
+	width := 32
+	tabpane := widgets.NewTabPane("Week", "Month", "Year", "5 Years")
+	tabpane.SetRect(x-width/2, y, x+width/2-1, y+3)
+	tabpane.Border = true
+	return tabpane
 }

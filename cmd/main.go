@@ -28,9 +28,10 @@ func main() {
 
 	quotesTable := internal.CreateTable("Stock Quotes", len(configuration.UserQuotes), 0)
 	ratesTable := internal.CreateTable("Rates", 2, quotesTable.GetRect().Max.Y)
-	candlePlot := internal.CreateCandlePlot(ratesTable.GetRect().Max.Y)
+	tabPane := internal.CreateTabPane(quotesTable.GetRect().Dx()/2, ratesTable.GetRect().Max.Y)
+	candlePlot := internal.CreateCandlePlot(tabPane.GetRect().Max.Y)
 
-	internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot)
+	internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot, tabPane)
 
 	ticker := time.NewTicker(10 * time.Second)
 	uiEvents := ui.PollEvents()
@@ -39,14 +40,21 @@ func main() {
 		select {
 		case e := <-uiEvents:
 			switch e.ID {
+			case "<Left>":
+				tabPane.FocusLeft()
+				internal.UpdatePlotData(dispatcher, client, &data, candlePlot, tabPane)
+			case "<Right>":
+				tabPane.FocusRight()
+				internal.UpdatePlotData(dispatcher, client, &data, candlePlot, tabPane)
 			case "q", "<C-c>":
 				return
 			case "<MouseLeft>":
 				mouseEvent := e.Payload.(ui.Mouse)
-				internal.HandleMouseClick(&mouseEvent, quotesTable, dispatcher, client, &data, candlePlot)
+				internal.HandleMouseClick(&mouseEvent, quotesTable, dispatcher, client, &data, candlePlot, tabPane)
 			}
+
 		case <-ticker.C:
-			internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot)
+			internal.UpdateData(dispatcher, client, &data, quotesTable, ratesTable, candlePlot, tabPane)
 		}
 	}
 }

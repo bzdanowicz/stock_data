@@ -13,7 +13,7 @@ type Configuration struct {
 }
 
 func ReadConfiguration() Configuration {
-	file, err := os.Open("../config.json")
+	file, err := os.Open("config.json")
 	if err != nil {
 		log.Fatalln("Error:", err)
 	}

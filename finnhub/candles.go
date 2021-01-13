@@ -17,12 +17,12 @@ type Candle struct {
 	Status       string    `json:"s"`
 }
 
-func (c *Client) GetCandle(symbol string, from time.Time, to time.Time) (*Candle, error) {
+func (c *Client) GetCandle(symbol string, from time.Time, to time.Time, resolution string) (*Candle, error) {
 	query, _ := url.Parse(c.baseURL.String())
 	query.Path += "/stock/candle"
 	params := url.Values{}
 	params.Add("symbol", symbol)
-	params.Add("resolution", "D")
+	params.Add("resolution", resolution)
 	params.Add("from", strconv.FormatInt(from.Unix(), 10))
 	params.Add("to", strconv.FormatInt(to.Unix(), 10))
 	query.RawQuery = params.Encode()
@@ -38,14 +38,15 @@ func (c *Client) GetCandle(symbol string, from time.Time, to time.Time) (*Candle
 }
 
 type CandleTask struct {
-	Symbol   string
-	From     time.Time
-	To       time.Time
-	Executor func(symbol string, from time.Time, to time.Time) (*Candle, error)
+	Symbol     string
+	From       time.Time
+	To         time.Time
+	Resolution string
+	Executor   func(symbol string, from time.Time, to time.Time, resolution string) (*Candle, error)
 }
 
 func (c *CandleTask) Execute() (interface{}, error) {
-	return c.Executor(c.Symbol, c.From, c.To)
+	return c.Executor(c.Symbol, c.From, c.To, c.Resolution)
 }
 
 func (q *CandleTask) GetParameter() string {
