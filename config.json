@@ -1,0 +1,8 @@
+{
+    "apiKey": "",
+    "quotes": [
+        "AAPL", "MSFT", "AMZN", "GOOG", "APVO"
+    ],
+    "base": "PLN"
+
+}
